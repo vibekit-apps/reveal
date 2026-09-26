@@ -7,6 +7,7 @@ const titles={pods:'Chat Pods',deep:'Deep Dive',reveal:'Reveal',parents:'Parent 
 function show(name){$$('.screen').forEach(s=>s.classList.toggle('active',s.id===`screen-${name}`));$$('.tab').forEach(t=>{const on=t.dataset.screen===name;t.classList.toggle('active',on);t.setAttribute('aria-selected',on)});$('#screen-title').textContent=titles[name];window.scrollTo(0,0);history.replaceState(null,'',`#${name}`)}
 $$('.tab').forEach(t=>t.onclick=()=>show(t.dataset.screen));
 const toast=m=>{const el=$('#toast');el.textContent=m;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2200)};
+const adultConfirm=$('#adult-confirm'),enterUnseen=$('#enter-unseen');if(state.welcomed||state.token)$('#welcome-gate').hidden=true;adultConfirm.onchange=()=>enterUnseen.disabled=!adultConfirm.checked;enterUnseen.onclick=()=>{state.welcomed=true;save();$('#welcome-gate').hidden=true};
 let loginMode=false;const auth=$('#auth-form');if(state.token)$('#auth-gate').hidden=true;
 let firebaseAuth,phoneConfirmation;
 async function initFirebase(){const cfg=await fetch('/api/firebase-config').then(r=>r.json());if(!cfg.apiKey)return;const appMod=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),authMod=await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js');firebaseAuth=authMod.getAuth(appMod.initializeApp(cfg));window.fbAuth={...authMod}}
