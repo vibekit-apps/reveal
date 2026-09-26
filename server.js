@@ -27,6 +27,20 @@ const MIME = {
 //     const item = await readBody(req);
 //     json(res, store.write('items', [...store.read('items'), item]), 201);
 //   },
+const sessions = new Map();
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+  return { salt, hash: crypto.scryptSync(password, salt, 64).toString('hex') };
+}
+function sessionUser(req) {
+  const token = (req.headers.authorization || '').replace(/^Bearer /, '');
+  return sessions.get(token);
+}
+function requireUser(req, res) {
+  const user = sessionUser(req);
+  if (!user) json(res, { error: 'Sign in required' }, 401);
+  return user;
+}
+
 const MATCH_EXPIRY_MS = 21 * 24 * 60 * 60 * 1000;
 function matchingData() {
   const data = store.read('matching', { waiting: [], matches: [] });
@@ -39,9 +53,42 @@ function matchingData() {
 
 const routes = {
   'GET /health': (req, res) => json(res, { status: 'ok', uptime: process.uptime() }),
+  'POST /api/auth/register': async (req, res) => {
+    const { email, password, name, age } = await readBody(req);
+    if (!/^\S+@\S+\.\S+$/.test(email || '') || (password || '').length < 8 || Number(age) < 30) return json(res, { error: 'Use a valid email, password of 8+ characters, and age 30+' }, 400);
+    const users = store.read('users', []);
+    if (users.some((u) => u.email === email.toLowerCase())) return json(res, { error: 'Account already exists' }, 409);
+    const secured = hashPassword(password), user = { id: crypto.randomUUID(), email: email.toLowerCase(), name, age: Number(age), ...secured, blocked: [], createdAt: Date.now() };
+    users.push(user); store.write('users', users);
+    const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, user.id);
+    json(res, { token, user: { id: user.id, email: user.email, name: user.name, age: user.age } }, 201);
+  },
+  'POST /api/auth/login': async (req, res) => {
+    const { email, password } = await readBody(req), users = store.read('users', []), user = users.find((u) => u.email === String(email).toLowerCase());
+    if (!user || hashPassword(password || '', user.salt).hash !== user.hash) return json(res, { error: 'Incorrect email or password' }, 401);
+    const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, user.id);
+    json(res, { token, user: { id: user.id, email: user.email, name: user.name, age: user.age } });
+  },
+  'POST /api/safety/action': async (req, res) => {
+    const userId = requireUser(req, res); if (!userId) return;
+    const { targetId, action, reason } = await readBody(req);
+    if (!targetId || !['block', 'report'].includes(action)) return json(res, { error: 'Invalid safety action' }, 400);
+    const users = store.read('users', []), user = users.find((u) => u.id === userId);
+    if (action === 'block' && !user.blocked.includes(targetId)) user.blocked.push(targetId);
+    if (action === 'report') { const reports = store.read('reports', []); reports.push({ id: crypto.randomUUID(), reporterId: userId, targetId, reason: String(reason || '').slice(0, 500), status: 'pending-review', createdAt: Date.now() }); store.write('reports', reports); }
+    store.write('users', users); json(res, { ok: true });
+  },
+  'POST /api/account/delete': async (req, res) => {
+    const userId = requireUser(req, res); if (!userId) return;
+    store.write('users', store.read('users', []).filter((u) => u.id !== userId));
+    const data = matchingData(); data.waiting = data.waiting.filter((u) => u.userId !== userId); data.matches = data.matches.filter((m) => !m.users.includes(userId)); store.write('matching', data);
+    for (const [token, id] of sessions) if (id === userId) sessions.delete(token);
+    json(res, { ok: true });
+  },
   'POST /api/match/join': async (req, res) => {
     const body = await readBody(req);
-    if (!body.userId) return json(res, { error: 'Missing userId' }, 400);
+    const signedInId = requireUser(req, res); if (!signedInId) return;
+    body.userId = signedInId;
     const data = matchingData();
     const existing = data.matches.find((m) => m.users.includes(body.userId));
     if (existing) return json(res, publicMatch(existing, body.userId));
@@ -62,13 +109,15 @@ const routes = {
     json(res, { status: 'waiting' }, 202);
   },
   'POST /api/match/status': async (req, res) => {
-    const { userId } = await readBody(req);
+    await readBody(req);
+    const userId = requireUser(req, res); if (!userId) return;
     const data = matchingData();
     const match = data.matches.find((m) => m.users.includes(userId));
     json(res, match ? publicMatch(match, userId) : { status: 'waiting' });
   },
   'POST /api/match/decide': async (req, res) => {
-    const { userId, matchId, decision } = await readBody(req);
+    const { matchId, decision } = await readBody(req);
+    const userId = requireUser(req, res); if (!userId) return;
     if (!['accept', 'pass'].includes(decision)) return json(res, { error: 'Invalid decision' }, 400);
     const data = matchingData();
     const match = data.matches.find((m) => m.id === matchId && m.users.includes(userId));
@@ -85,7 +134,8 @@ const routes = {
     json(res, publicMatch(match, userId));
   },
   'POST /api/match/message': async (req, res) => {
-    const { userId, matchId, text } = await readBody(req);
+    const { matchId, text } = await readBody(req);
+    const userId = requireUser(req, res); if (!userId) return;
     if (!text || text.length > 2000) return json(res, { error: 'Invalid message' }, 400);
     const data = matchingData();
     const match = data.matches.find((m) => m.id === matchId && m.users.includes(userId));
@@ -103,7 +153,7 @@ function publicMatch(match, userId) {
   const other = match.profiles[otherId] || {};
   const accepted = match.decisions?.[userId] === 'accept';
   const open = match.users.every((id) => match.decisions?.[id] === 'accept');
-  return { status: 'matched', matchId: match.id, accepted, open, other: { age: other.age, isParent: other.isParent, parentStatus: other.parentStatus || (other.isParent ? 'Has children' : 'No children'), goal: other.goal || 'Long-term relationship' }, messages: match.messages.map((m) => ({ ...m, mine: m.from === userId })) };
+  return { status: 'matched', matchId: match.id, accepted, open, other: { id: otherId, age: other.age, isParent: other.isParent, parentStatus: other.parentStatus || (other.isParent ? 'Has children' : 'No children'), goal: other.goal || 'Long-term relationship' }, messages: match.messages.map((m) => ({ ...m, mine: m.from === userId })) };
 }
 
 function json(res, data, status = 200) {
