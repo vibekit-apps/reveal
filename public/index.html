@@ -5,11 +5,12 @@
 <main>
 <section class="screen active" id="screen-pods">
   <div class="matchmaking" id="matchmaking"><div><strong>Find a real person</strong><span>Join the anonymous queue and start a timed conversation.</span></div><button class="primary" id="find-match">Find a match</button></div>
-  <div class="intro"><div><span class="kicker">BLIND CONNECTION 01</span><h2>Meet the person,<br>not the profile.</h2></div><div class="timer"><span id="timer">09:42</span><small>remaining</small></div></div>
+  <div class="compat-card" id="compat-card" hidden><div class="compat-score"><strong>86%</strong><span>compatible</span></div><div><span class="kicker">ANONYMOUS MATCH</span><h2>A promising connection.</h2><p>No photo, name, or bio—just the things that matter.</p></div><div class="compat-signals"><span id="compat-age">Age 30+</span><span id="compat-parent">Parent</span><span id="compat-goal">Long-term relationship</span></div><div class="compat-actions"><button class="secondary" id="compat-pass">Pass</button><button class="primary" id="open-pod">Open a Pod</button></div><small id="compat-wait" hidden>Waiting for them to agree…</small></div>
+  <div id="pod-chat"><div class="intro"><div><span class="kicker">BLIND CONNECTION 01</span><h2>Meet the person,<br>not the profile.</h2></div><div class="timer"><span id="timer">09:42</span><small>remaining</small></div></div>
   <div class="match-card"><div class="avatar blind"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"/></svg></div><div class="grow"><h3 id="pod-name">Demo Pod 17</h3><p id="pod-meta">Age 38 · sample conversation</p><div class="tags"><span>Has children</span><span>Wants commitment</span></div></div><span class="online">online</span></div>
   <div class="messages" id="pod-messages"><div class="bubble them sample">What does a perfect Sunday look like to you?</div><div class="bubble me sample">A slow breakfast, the park with my daughter, then cooking for people I love.</div><div class="bubble them sample">That sounds pretty close to mine. My son insists pancakes are a food group.</div></div>
   <form class="composer" data-chat="pod"><input aria-label="Message Pod 17" placeholder="Write a message…" required><button aria-label="Send message"><svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form>
-  <div class="decision"><p>Ready to keep talking?</p><div><button class="secondary" id="pass">Pass</button><button class="primary" id="connect">Connect deeper</button></div></div>
+  <div class="decision"><p>Ready to keep talking?</p><div><button class="secondary" id="pass">Pass</button><button class="primary" id="connect">Connect deeper</button></div></div></div>
 </section>
 <section class="screen" id="screen-deep">
   <div class="person-strip"><div class="avatar blind small">17</div><div><h3>Pod 17</h3><p>Deep Dive · connected today</p></div><span class="safe">Private</span></div>

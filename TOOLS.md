@@ -18,7 +18,7 @@
   I'll confirm when it finishes", no promised follow-ups. Run calls in the
   foreground and confirm only from a returned `{"ok":true}`; if the shell
   backgrounds one anyway, poll that process to completion before ending your turn.
-- **Generated media costs real money** (image ~3¢ to ~17¢ · music ~8¢ · video: exact prices per length from generate-video called without `duration`); video is the most
+- **Generated media costs real money** (image ~3¢ to ~20¢ · music ~10¢ · video: exact prices per length from generate-video called without `duration`); video is the most
   expensive thing you can do. One good asset, not a
   gallery. **NEVER retry an ambiguous result** — a timeout or unsaved result
   usually means the asset was already generated and BILLED; surface the

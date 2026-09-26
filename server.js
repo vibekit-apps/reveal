@@ -51,7 +51,7 @@ const routes = {
       return u.userId !== body.userId && parentRule;
     });
     if (compatible) {
-      const match = { id: crypto.randomUUID(), users: [compatible.userId, body.userId], profiles: { [compatible.userId]: compatible, [body.userId]: body }, messages: [], createdAt: Date.now(), lastActiveAt: Date.now() };
+      const match = { id: crypto.randomUUID(), users: [compatible.userId, body.userId], profiles: { [compatible.userId]: compatible, [body.userId]: body }, decisions: {}, messages: [], createdAt: Date.now(), lastActiveAt: Date.now() };
       data.waiting = waiting.filter((u) => u.userId !== compatible.userId);
       data.matches.push(match);
       store.write('matching', data);
@@ -67,12 +67,30 @@ const routes = {
     const match = data.matches.find((m) => m.users.includes(userId));
     json(res, match ? publicMatch(match, userId) : { status: 'waiting' });
   },
+  'POST /api/match/decide': async (req, res) => {
+    const { userId, matchId, decision } = await readBody(req);
+    if (!['accept', 'pass'].includes(decision)) return json(res, { error: 'Invalid decision' }, 400);
+    const data = matchingData();
+    const match = data.matches.find((m) => m.id === matchId && m.users.includes(userId));
+    if (!match) return json(res, { error: 'Match not found' }, 404);
+    if (decision === 'pass') {
+      data.matches = data.matches.filter((m) => m.id !== matchId);
+      store.write('matching', data);
+      return json(res, { status: 'passed' });
+    }
+    match.decisions = match.decisions || {};
+    match.decisions[userId] = 'accept';
+    match.lastActiveAt = Date.now();
+    store.write('matching', data);
+    json(res, publicMatch(match, userId));
+  },
   'POST /api/match/message': async (req, res) => {
     const { userId, matchId, text } = await readBody(req);
     if (!text || text.length > 2000) return json(res, { error: 'Invalid message' }, 400);
     const data = matchingData();
     const match = data.matches.find((m) => m.id === matchId && m.users.includes(userId));
     if (!match) return json(res, { error: 'Match not found' }, 404);
+    if (!match.users.every((id) => match.decisions?.[id] === 'accept')) return json(res, { error: 'Both people must open the Pod first' }, 403);
     match.messages.push({ id: crypto.randomUUID(), from: userId, text, sentAt: Date.now() });
     match.lastActiveAt = Date.now();
     store.write('matching', data);
@@ -83,7 +101,9 @@ const routes = {
 function publicMatch(match, userId) {
   const otherId = match.users.find((id) => id !== userId);
   const other = match.profiles[otherId] || {};
-  return { status: 'matched', matchId: match.id, other: { name: other.name, age: other.age, isParent: other.isParent }, messages: match.messages.map((m) => ({ ...m, mine: m.from === userId })) };
+  const accepted = match.decisions?.[userId] === 'accept';
+  const open = match.users.every((id) => match.decisions?.[id] === 'accept');
+  return { status: 'matched', matchId: match.id, accepted, open, other: { age: other.age, isParent: other.isParent, parentStatus: other.parentStatus || (other.isParent ? 'Has children' : 'No children'), goal: other.goal || 'Long-term relationship' }, messages: match.messages.map((m) => ({ ...m, mine: m.from === userId })) };
 }
 
 function json(res, data, status = 200) {
