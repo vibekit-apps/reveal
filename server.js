@@ -115,13 +115,15 @@ const routes = {
       return u.userId !== body.userId && parentRule;
     });
     if (compatible) {
-      const match = { id: crypto.randomUUID(), users: [compatible.userId, body.userId], profiles: { [compatible.userId]: compatible, [body.userId]: body }, decisions: {}, messages: [], createdAt: Date.now(), lastActiveAt: Date.now() };
+      const sharedValues = (compatible.values || []).filter((v) => (body.values || []).includes(v));
+      const score = Math.min(98, 68 + (compatible.goal === body.goal ? 12 : 0) + (compatible.parentStatus === body.parentStatus ? 8 : 0) + sharedValues.length * 5);
+      const match = { id: crypto.randomUUID(), users: [compatible.userId, body.userId], profiles: { [compatible.userId]: compatible, [body.userId]: body }, compatibility: { score, sharedValues }, decisions: {}, messages: [], createdAt: Date.now(), lastActiveAt: Date.now() };
       data.waiting = waiting.filter((u) => u.userId !== compatible.userId);
       data.matches.push(match);
       store.write('matching', data);
       return json(res, publicMatch(match, body.userId), 201);
     }
-    data.waiting = [...waiting, { userId: body.userId, name: body.name || 'Anonymous', age: Number(body.age) || 30, isParent: !!body.isParent, parentsOnly: !!body.parentsOnly, joinedAt: Date.now() }];
+    data.waiting = [...waiting, { userId: body.userId, name: body.name || 'Anonymous', age: Number(body.age) || 30, isParent: !!body.isParent, parentsOnly: !!body.parentsOnly, parentStatus: body.parentStatus, goal: body.goal, pace: body.pace, values: body.values || [], dealbreaker: body.dealbreaker || '', joinedAt: Date.now() }];
     store.write('matching', data);
     json(res, { status: 'waiting' }, 202);
   },
@@ -170,7 +172,7 @@ function publicMatch(match, userId) {
   const other = match.profiles[otherId] || {};
   const accepted = match.decisions?.[userId] === 'accept';
   const open = match.users.every((id) => match.decisions?.[id] === 'accept');
-  return { status: 'matched', matchId: match.id, accepted, open, other: { id: otherId, age: other.age, isParent: other.isParent, parentStatus: other.parentStatus || (other.isParent ? 'Has children' : 'No children'), goal: other.goal || 'Long-term relationship' }, messages: match.messages.map((m) => ({ ...m, mine: m.from === userId })) };
+  return { status: 'matched', matchId: match.id, accepted, open, compatibility: match.compatibility || { score: 86, sharedValues: [] }, other: { id: otherId, age: other.age, isParent: other.isParent, parentStatus: other.parentStatus || (other.isParent ? 'Has children' : 'No children'), goal: other.goal || 'Long-term relationship', pace: other.pace },  messages: match.messages.map((m) => ({ ...m, mine: m.from === userId })) };
 }
 
 function json(res, data, status = 200) {
