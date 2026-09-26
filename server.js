@@ -55,7 +55,7 @@ const routes = {
   'GET /health': (req, res) => json(res, { status: 'ok', uptime: process.uptime() }),
   'POST /api/auth/register': async (req, res) => {
     const { email, password, name, age } = await readBody(req);
-    if (!/^\S+@\S+\.\S+$/.test(email || '') || (password || '').length < 8 || Number(age) < 30) return json(res, { error: 'Use a valid email, password of 8+ characters, and age 30+' }, 400);
+    if (!/^\S+@\S+\.\S+$/.test(email || '') || (password || '').length < 8 || Number(age) < 18) return json(res, { error: 'Use a valid email, password of 8+ characters, and age 18+' }, 400);
     const users = store.read('users', []);
     if (users.some((u) => u.email === email.toLowerCase())) return json(res, { error: 'Account already exists' }, 409);
     const secured = hashPassword(password), user = { id: crypto.randomUUID(), email: email.toLowerCase(), name, age: Number(age), ...secured, blocked: [], createdAt: Date.now() };
