@@ -1,87 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<!-- viewport-fit=cover is what lets the layout reach under the notch and the
-     home indicator; styles.css then pads it back with env(safe-area-inset-*).
-     The platform only injects a viewport when a page has none, so this one
-     stands and must keep viewport-fit=cover. -->
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Your app</title>
-<link rel="stylesheet" href="/styles.css">
-
-<!-- DO NOT ADD A WEB APP MANIFEST OR APP ICONS HERE.
-     The platform injects the install metadata at the proxy from THIS app's
-     real name, with its own generated icon and colour. It backs off the
-     instant a page declares a manifest link of its own, so anything static
-     here would win that race and give every app the same placeholder
-     identity: every install named "Your app", every home screen icon
-     identical. Shipping nothing is what gets the user their own name.
-     Careful: the detector greps this HTML for a manifest link, so even a
-     commented-out or example one silently disables it. Do not write one.
-     (Running locally there is no install metadata. That is expected; it
-     appears once the app is served on *.vibekit.bot.) -->
-</head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f172a"><title>Unseen</title><link rel="stylesheet" href="/styles.css"></head>
 <body>
-
-<header class="appbar">
-  <h1 id="app-name">Your app</h1>
-  <span class="status"><span class="dot"></span>Live</span>
-</header>
-
+<header class="appbar"><button class="icon-btn" id="back" aria-label="Go back" hidden>‹</button><div><span class="eyebrow">UNSEEN</span><h1 id="screen-title">Chat Pods</h1></div><span class="live-dot" aria-label="Online"></span></header>
 <main>
-  <!-- One <section class="screen"> per tab. app.js just toggles .active. -->
-  <section class="screen active" id="screen-home">
-    <div class="card">
-      <h2>This is your app</h2>
-      <p>Open the chat with your agent and describe what you want. Every change ships in
-         seconds and shows up right here.</p>
-    </div>
-    <div class="card" id="install-card" hidden>
-      <h2>Add it to your home screen</h2>
-      <p id="install-copy">Install it and it opens full screen with its own icon, like any other app.</p>
-      <button class="btn" id="install-btn" hidden>Install</button>
-    </div>
-    <ul class="list">
-      <li><span>Tabs below are yours</span><span class="meta">rename them</span></li>
-      <li><span>Data persists</span><span class="meta">lib/store.js</span></li>
-      <li><span>Add API routes</span><span class="meta">server.js</span></li>
-    </ul>
-  </section>
-
-  <section class="screen" id="screen-add">
-    <div class="card">
-      <h2>Second screen</h2>
-      <p>Whatever your app's main action is, put it here. Tell your agent and it will
-         rebuild this tab around it.</p>
-    </div>
-  </section>
-
-  <section class="screen" id="screen-you">
-    <div class="card">
-      <h2>Profile</h2>
-      <p>Settings, account, saved items. Ask your agent for sign-in if you need it.</p>
-    </div>
-    <footer>Built with <a href="https://vibekit.bot">VibeKit</a></footer>
-  </section>
+<section class="screen active" id="screen-pods">
+  <div class="intro"><div><span class="kicker">BLIND CONNECTION 01</span><h2>Meet the person,<br>not the profile.</h2></div><div class="timer"><span id="timer">09:42</span><small>remaining</small></div></div>
+  <div class="match-card"><div class="avatar blind"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"/></svg></div><div class="grow"><h3>Pod 17</h3><p>Age 38 · 12 km away</p><div class="tags"><span>Has children</span><span>Wants commitment</span></div></div><span class="online">online</span></div>
+  <div class="messages" id="pod-messages"><div class="bubble them">What does a perfect Sunday look like to you?</div><div class="bubble me">A slow breakfast, the park with my daughter, then cooking for people I love.</div><div class="bubble them">That sounds pretty close to mine. My son insists pancakes are a food group.</div></div>
+  <form class="composer" data-chat="pod"><input aria-label="Message Pod 17" placeholder="Write a message…" required><button aria-label="Send message"><svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form>
+  <div class="decision"><p>Ready to keep talking?</p><div><button class="secondary" id="pass">Pass</button><button class="primary" id="connect">Connect deeper</button></div></div>
+</section>
+<section class="screen" id="screen-deep">
+  <div class="person-strip"><div class="avatar blind small">17</div><div><h3>Pod 17</h3><p>Deep Dive · connected today</p></div><span class="safe">Private</span></div>
+  <div class="prompt-card"><span>CONVERSATION PROMPT</span><p>What has parenthood taught you about partnership?</p></div>
+  <div class="messages tall" id="deep-messages"><div class="day">Today</div><div class="bubble them">Patience, mostly. And that showing up matters more than saying the perfect thing.</div></div>
+  <form class="composer" data-chat="deep"><button type="button" class="voice" id="voice" aria-label="Record voice note"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg></button><input aria-label="Deep Dive message" placeholder="Say something real…" required><button aria-label="Send message"><svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form>
+  <button class="reveal-cta" id="ask-reveal"><span>Ready to meet face to face?</span><strong>Request mutual reveal →</strong></button>
+</section>
+<section class="screen" id="screen-reveal">
+  <div class="reveal-hero"><span class="kicker">MUTUAL REVEAL</span><h2>See who’s behind<br>the conversation.</h2><p>Photos stay hidden until you both agree. No pressure, no surprises.</p></div>
+  <div class="reveal-card" id="reveal-card"><div class="photo-lock"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Photo hidden</span></div><div class="profile-preview"><h3>Pod 17</h3><p>38 · Parent · 12 km away</p><p class="quote">“Looking for something grounded, playful, and built to last.”</p></div></div>
+  <div class="agreement"><div class="agree-row"><span>You</span><strong id="you-status">Not decided</strong></div><div class="agree-row"><span>Pod 17</span><strong id="their-status">Waiting for you</strong></div></div>
+  <button class="primary wide" id="agree">I agree to reveal</button><p class="fine">You can change your mind until both people agree.</p>
+</section>
+<section class="screen" id="screen-parents">
+  <div class="section-head"><span class="kicker">PARENT HUB</span><h2>Family is part<br>of the picture.</h2><p>Be upfront about the life you’ve built and what fits within it.</p></div>
+  <label class="filter-card"><div><strong>Match only with other parents</strong><span>Prioritize people who understand the juggle.</span></div><input type="checkbox" id="parents-only"><i></i></label>
+  <h3 class="label">YOUR FAMILY LIFE</h3><div class="choice-grid" id="parent-status"><button data-value="I have children">I have children</button><button data-value="Open to children">Open to children</button><button data-value="No more children">No more children</button><button data-value="Prefer not to say">Prefer not to say</button></div>
+  <h3 class="label">FAMILY-FRIENDLY DEALBREAKERS</h3><div class="deal-list"><label><input type="checkbox" value="Understands co-parenting"><span>Understands co-parenting</span></label><label><input type="checkbox" value="Comfortable with limited spontaneity"><span>Comfortable with limited spontaneity</span></label><label><input type="checkbox" value="Respects family time"><span>Respects family time</span></label></div>
+</section>
+<section class="screen" id="screen-profile">
+  <div class="profile-top"><div class="avatar monogram">A</div><div><h2>Alex, 36</h2><p>Profile visible in blind matching</p></div></div>
+  <form id="profile-form"><label class="field">Display name<input name="name" value="Alex"></label><label class="field">Age<input name="age" type="number" min="30" value="36"></label><label class="field">About me<textarea name="about">Parent, home cook, and firm believer that honesty can still be kind.</textarea></label><h3 class="label">VISIBILITY</h3><label class="setting"><span><strong>Appear in Chat Pods</strong><small>Let new people match with you</small></span><input type="checkbox" name="visible" checked><i></i></label><label class="setting"><span><strong>Show parenting status</strong><small>Visible before the photo reveal</small></span><input type="checkbox" name="showParent" checked><i></i></label><button class="primary wide" type="submit">Save profile</button></form>
+</section>
 </main>
-
-<!-- Bottom tab bar: thumb-reachable, which is where phone navigation belongs. -->
 <nav class="tabbar" role="tablist">
-  <button class="tab active" role="tab" data-screen="home" aria-selected="true">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-    <span>Home</span>
-  </button>
-  <button class="tab" role="tab" data-screen="add" aria-selected="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-    <span>Add</span>
-  </button>
-  <button class="tab" role="tab" data-screen="you" aria-selected="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    <span>You</span>
-  </button>
-</nav>
-
-<script src="/app.js"></script>
-</body>
-</html>
+<button class="tab active" data-screen="pods"><svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg><span>Chat Pods</span></button>
+<button class="tab" data-screen="deep"><svg viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0-9-9c0 1.7.5 3.4 1.3 4.8L3 21l4.2-1.3A9 9 0 0 0 12 21Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg><span>Deep Dive</span></button>
+<button class="tab" data-screen="reveal"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Reveal</span></button>
+<button class="tab" data-screen="parents"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>Parent Hub</span></button>
+<button class="tab" data-screen="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/></svg><span>Profile</span></button>
+</nav><div class="toast" id="toast"></div><script src="/app.js"></script></body></html>

@@ -1,65 +1,20 @@
-// Tab switching, the install prompt, and the service worker. That is all.
-// No framework, no build step, no bundle to keep in sync.
-
-// ── Tabs ───────────────────────────────────────────────────────────
-const tabs = document.querySelectorAll('.tab');
-const screens = document.querySelectorAll('.screen');
-
-function show(name) {
-  screens.forEach((s) => s.classList.toggle('active', s.id === `screen-${name}`));
-  tabs.forEach((t) => {
-    const on = t.dataset.screen === name;
-    t.classList.toggle('active', on);
-    t.setAttribute('aria-selected', String(on));
-  });
-  // Each tab starts at the top, the way a native tab bar behaves.
-  window.scrollTo(0, 0);
-}
-tabs.forEach((t) => t.addEventListener('click', () => show(t.dataset.screen)));
-
-// ── Title ──────────────────────────────────────────────────────────
-// Name the app after its subdomain until the agent gives it a real one, so a
-// fresh build never says "Your app" on a page the user is already sharing.
-const sub = location.hostname.split('.')[0];
-if (sub && sub !== 'localhost' && !/^\d+$/.test(sub)) {
-  const pretty = sub.replace(/-[a-z0-9]{4}$/i, '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-  if (pretty) {
-    document.getElementById('app-name').textContent = pretty;
-    document.title = pretty;
-  }
-}
-
-// ── Install ────────────────────────────────────────────────────────
-// Two different worlds. Chrome fires beforeinstallprompt and gives us a real
-// button. iOS Safari has no such event and never will, so the only honest move
-// there is to tell the user where the Share button is. Both are hidden once the
-// app is already installed, since display-mode:standalone means we ARE the
-// installed app and offering to install it again is nonsense.
-const card = document.getElementById('install-card');
-const btn = document.getElementById('install-btn');
-const installed = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-
-let deferred = null;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferred = e;
-  if (!installed) { card.hidden = false; btn.hidden = false; }
-});
-
-btn.addEventListener('click', async () => {
-  if (!deferred) return;
-  deferred.prompt();
-  await deferred.userChoice;
-  deferred = null;
-  card.hidden = true;
-});
-
-// iOS has no install prompt, so there is nothing for this card to do there.
-// The platform shows the iPhone its own "Add to home screen" hint above the
-// page, so one surface owns that instruction; leave it to the platform.
-
-// ── Service worker ─────────────────────────────────────────────────
-// See sw.js: network always wins, the cache is an offline fallback only.
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-}
+const $=(s,p=document)=>p.querySelector(s), $$=(s,p=document)=>[...p.querySelectorAll(s)];
+const state=JSON.parse(localStorage.getItem('unseen-state')||'{}');
+const save=()=>localStorage.setItem('unseen-state',JSON.stringify(state));
+const titles={pods:'Chat Pods',deep:'Deep Dive',reveal:'Reveal',parents:'Parent Hub',profile:'Profile'};
+function show(name){$$('.screen').forEach(s=>s.classList.toggle('active',s.id===`screen-${name}`));$$('.tab').forEach(t=>{const on=t.dataset.screen===name;t.classList.toggle('active',on);t.setAttribute('aria-selected',on)});$('#screen-title').textContent=titles[name];window.scrollTo(0,0);history.replaceState(null,'',`#${name}`)}
+$$('.tab').forEach(t=>t.onclick=()=>show(t.dataset.screen));
+const toast=m=>{const el=$('#toast');el.textContent=m;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2200)};
+let seconds=state.seconds??582;setInterval(()=>{if(seconds>0){seconds--;state.seconds=seconds;if(seconds%10===0)save()}const m=String(Math.floor(seconds/60)).padStart(2,'0'),s=String(seconds%60).padStart(2,'0');$('#timer').textContent=`${m}:${s}`;if(!seconds)$('#connect').textContent='Time is up — decide'},1000);
+function addMessage(box,text,type='me'){const b=document.createElement('div');b.className=`bubble ${type}`;b.textContent=text;$(box).append(b);b.scrollIntoView({behavior:'smooth',block:'nearest'})}
+$$('.composer').forEach(form=>form.onsubmit=e=>{e.preventDefault();const input=$('input',form),type=form.dataset.chat,box=type==='pod'?'#pod-messages':'#deep-messages';addMessage(box,input.value);state.messages=state.messages||{};(state.messages[type]??=[]).push(input.value);save();input.value=''});
+Object.entries(state.messages||{}).forEach(([type,msgs])=>msgs.forEach(m=>addMessage(type==='pod'?'#pod-messages':'#deep-messages',m)));
+$('#connect').onclick=()=>{state.connected=true;save();show('deep');toast('Deep Dive unlocked')};$('#pass').onclick=()=>toast('Pod passed. Your history is saved.');$('#ask-reveal').onclick=()=>show('reveal');
+const renderReveal=()=>{if(state.revealAsked){$('#you-status').textContent='Agreed';$('#their-status').textContent='Agreed';$('#agree').textContent='Reveal complete';$('#reveal-card').classList.add('revealed');$('.photo-lock span').textContent='Mutual match confirmed';$('.photo-lock svg').innerHTML='<path d="M20 6 9 17l-5-5"/>'}};$('#agree').onclick=()=>{state.revealAsked=true;save();renderReveal();toast('You both agreed to reveal')};renderReveal();
+const po=$('#parents-only');po.checked=!!state.parentsOnly;po.onchange=()=>{state.parentsOnly=po.checked;save();toast(po.checked?'Parent-only matching is on':'All compatible matches included')};
+$$('#parent-status button').forEach(b=>{b.classList.toggle('selected',state.parentStatus===b.dataset.value);b.onclick=()=>{$$('#parent-status button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.parentStatus=b.dataset.value;save()}});
+$$('.deal-list input').forEach(c=>{c.checked=(state.deals||[]).includes(c.value);c.onchange=()=>{state.deals=$$('.deal-list input:checked').map(x=>x.value);save()}});
+const pf=$('#profile-form');if(state.profile){pf.name.value=state.profile.name;pf.age.value=state.profile.age;pf.about.value=state.profile.about;pf.visible.checked=state.profile.visible;pf.showParent.checked=state.profile.showParent;$('.profile-top h2').textContent=`${state.profile.name}, ${state.profile.age}`;$('.monogram').textContent=state.profile.name[0].toUpperCase()}pf.onsubmit=e=>{e.preventDefault();state.profile={name:pf.name.value,age:pf.age.value,about:pf.about.value,visible:pf.visible.checked,showParent:pf.showParent.checked};save();$('.profile-top h2').textContent=`${state.profile.name}, ${state.profile.age}`;$('.monogram').textContent=state.profile.name[0].toUpperCase();toast('Profile saved')};
+let recorder,chunks=[];$('#voice').onclick=async()=>{if(recorder?.state==='recording'){recorder.stop();return}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});recorder=new MediaRecorder(stream);chunks=[];recorder.ondataavailable=e=>chunks.push(e.data);recorder.onstop=()=>{stream.getTracks().forEach(t=>t.stop());$('#voice').classList.remove('recording');addMessage('#deep-messages','Voice note · recorded just now');state.voiceNotes=(state.voiceNotes||0)+1;save();toast('Voice note saved to this chat')};recorder.start();$('#voice').classList.add('recording');toast('Recording — tap the microphone to stop')}catch{toast('Microphone access is needed for voice notes')}};
+if(location.hash&&titles[location.hash.slice(1)])show(location.hash.slice(1));
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
