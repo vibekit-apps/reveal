@@ -54,6 +54,11 @@ function matchingData() {
 const routes = {
   'GET /health': (req, res) => json(res, { status: 'ok', uptime: process.uptime() }),
   'GET /api/firebase-config': (req, res) => json(res, { apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || '', projectId: process.env.FIREBASE_PROJECT_ID || '', appId: process.env.FIREBASE_APP_ID || '', messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '' }),
+  'POST /api/auth/logout': (req, res) => {
+    const token = (req.headers.authorization || '').replace(/^Bearer /, '');
+    if (token) sessions.delete(token);
+    json(res, { ok: true });
+  },
   'POST /api/auth/firebase': async (req, res) => {
     const { idToken } = await readBody(req);
     if (!idToken || !process.env.FIREBASE_API_KEY) return json(res, { error: 'Firebase sign-in is not configured yet' }, 503);
