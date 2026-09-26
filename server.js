@@ -53,6 +53,18 @@ function matchingData() {
 
 const routes = {
   'GET /health': (req, res) => json(res, { status: 'ok', uptime: process.uptime() }),
+  'GET /api/firebase-config': (req, res) => json(res, { apiKey: process.env.FIREBASE_API_KEY || '', authDomain: process.env.FIREBASE_AUTH_DOMAIN || '', projectId: process.env.FIREBASE_PROJECT_ID || '', appId: process.env.FIREBASE_APP_ID || '', messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '' }),
+  'POST /api/auth/firebase': async (req, res) => {
+    const { idToken } = await readBody(req);
+    if (!idToken || !process.env.FIREBASE_API_KEY) return json(res, { error: 'Firebase sign-in is not configured yet' }, 503);
+    const verify = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) });
+    const payload = await verify.json(), fb = payload.users?.[0];
+    if (!verify.ok || !fb) return json(res, { error: 'Could not verify this sign-in' }, 401);
+    const users = store.read('users', []); let user = users.find((u) => u.firebaseId === fb.localId || (fb.email && u.email === fb.email.toLowerCase()));
+    if (!user) { user = { id: crypto.randomUUID(), firebaseId: fb.localId, email: (fb.email || '').toLowerCase(), phone: fb.phoneNumber || '', name: fb.displayName || 'New member', age: 18, blocked: [], createdAt: Date.now() }; users.push(user); store.write('users', users); }
+    const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, user.id);
+    json(res, { token, user: { id: user.id, email: user.email, phone: user.phone, name: user.name, age: user.age } });
+  },
   'POST /api/auth/register': async (req, res) => {
     const { email, password, name, age } = await readBody(req);
     if (!/^\S+@\S+\.\S+$/.test(email || '') || (password || '').length < 8 || Number(age) < 18) return json(res, { error: 'Use a valid email, password of 8+ characters, and age 18+' }, 400);
