@@ -1,7 +1,7 @@
 # Agent guide
 
 App: **reveal** at https://reveal.vibekit.bot
-Repo: template/mobile
+Repo: vibekit-apps/reveal
 
 ## NEVER (breaks the product)
 - **NEVER point the user at localhost / `npm start`** — only the live URL above. They have no terminal. "Download this?" → open the URL on a phone → Share → **Add to Home Screen**.

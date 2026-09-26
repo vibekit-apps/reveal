@@ -4,6 +4,8 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const store = require('./lib/store');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -27,7 +29,51 @@ const MIME = {
 //   },
 const routes = {
   'GET /health': (req, res) => json(res, { status: 'ok', uptime: process.uptime() }),
+  'POST /api/match/join': async (req, res) => {
+    const body = await readBody(req);
+    if (!body.userId) return json(res, { error: 'Missing userId' }, 400);
+    const data = store.read('matching', { waiting: [], matches: [] });
+    const existing = data.matches.find((m) => m.users.includes(body.userId));
+    if (existing) return json(res, publicMatch(existing, body.userId));
+    const waiting = data.waiting.filter((u) => u.userId !== body.userId);
+    const compatible = waiting.find((u) => {
+      const parentRule = (!body.parentsOnly || u.isParent) && (!u.parentsOnly || body.isParent);
+      return u.userId !== body.userId && parentRule;
+    });
+    if (compatible) {
+      const match = { id: crypto.randomUUID(), users: [compatible.userId, body.userId], profiles: { [compatible.userId]: compatible, [body.userId]: body }, messages: [], createdAt: Date.now() };
+      data.waiting = waiting.filter((u) => u.userId !== compatible.userId);
+      data.matches.push(match);
+      store.write('matching', data);
+      return json(res, publicMatch(match, body.userId), 201);
+    }
+    data.waiting = [...waiting, { userId: body.userId, name: body.name || 'Anonymous', age: Number(body.age) || 30, isParent: !!body.isParent, parentsOnly: !!body.parentsOnly, joinedAt: Date.now() }];
+    store.write('matching', data);
+    json(res, { status: 'waiting' }, 202);
+  },
+  'POST /api/match/status': async (req, res) => {
+    const { userId } = await readBody(req);
+    const data = store.read('matching', { waiting: [], matches: [] });
+    const match = data.matches.find((m) => m.users.includes(userId));
+    json(res, match ? publicMatch(match, userId) : { status: 'waiting' });
+  },
+  'POST /api/match/message': async (req, res) => {
+    const { userId, matchId, text } = await readBody(req);
+    if (!text || text.length > 2000) return json(res, { error: 'Invalid message' }, 400);
+    const data = store.read('matching', { waiting: [], matches: [] });
+    const match = data.matches.find((m) => m.id === matchId && m.users.includes(userId));
+    if (!match) return json(res, { error: 'Match not found' }, 404);
+    match.messages.push({ id: crypto.randomUUID(), from: userId, text, sentAt: Date.now() });
+    store.write('matching', data);
+    json(res, publicMatch(match, userId), 201);
+  },
 };
+
+function publicMatch(match, userId) {
+  const otherId = match.users.find((id) => id !== userId);
+  const other = match.profiles[otherId] || {};
+  return { status: 'matched', matchId: match.id, other: { name: other.name, age: other.age, isParent: other.isParent }, messages: match.messages.map((m) => ({ ...m, mine: m.from === userId })) };
+}
 
 function json(res, data, status = 200) {
   const payload = JSON.stringify(data);
