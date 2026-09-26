@@ -110,10 +110,11 @@ const routes = {
     const existing = data.matches.find((m) => m.users.includes(body.userId));
     if (existing) return json(res, publicMatch(existing, body.userId));
     const waiting = data.waiting.filter((u) => u.userId !== body.userId);
-    const compatible = waiting.find((u) => {
+    const candidates = waiting.filter((u) => {
       const parentRule = (!body.parentsOnly || u.isParent) && (!u.parentsOnly || body.isParent);
       return u.userId !== body.userId && parentRule;
-    });
+    }).map((u) => ({ user: u, score: (u.goal === body.goal ? 4 : 0) + (u.parentStatus === body.parentStatus ? 3 : 0) + (u.pace === body.pace ? 2 : 0) + (u.values || []).filter((v) => (body.values || []).includes(v)).length * 2 })).sort((a, b) => b.score - a.score);
+    const compatible = candidates[0]?.user;
     if (compatible) {
       const sharedValues = (compatible.values || []).filter((v) => (body.values || []).includes(v));
       const score = Math.min(98, 68 + (compatible.goal === body.goal ? 12 : 0) + (compatible.parentStatus === body.parentStatus ? 8 : 0) + sharedValues.length * 5);
